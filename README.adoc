@@ -1,0 +1,146 @@
+= Using QQmlObjectListProperty with inherited data members
+In this article, we are going to extend the Player class in order to model several kind of players.
+
+:toc:
+:sectnums:
+
+== Introduction
+This article is going to be easy considering the object-oriented programming nature of Cpp. That means we are making `Player` class parent of some other classes that will contains some feature the other didn't.
+
+NOTE: These modification will be work magically with the `FootballTeam` class without modifying anything.
+
+== Player type
+We are again a player type, that is relatively the same as the previous type, but with a small changes, that is just adding a virtual method named `play`. 
+
+IMPORTANT: When we add the virtual method named `play`, we make it a pure virtual, as their is no meaning for a simple player to have a type of play. Only the child of that class has a type of `play` of their own.
+
+The class will looks like:
+```cpp
+class Player : public QObject {
+...
+public:
+...
+    Q_INVOKABLE virtual void play() = 0;
+
+signals:
+...
+
+private:
+...
+};
+```
+
+NOTE: We put the `play` method has `Q_INVOKABLE` because we will use the `play` method from the child of the `Player` class to be used in the QML
+
+=== Stricker class
+Now that we have our parent class, something we can do is to use it in its child class, I then create 2 classes:
+
+* Stricker class
+* Defender class
+
+Both of those classes inherit from the `Player` class, and also have their own features implemented to them like so:
+
+```cpp
+Stricker::Stricker(QObject *po_player)
+    : Player{po_player} {}
+
+void Stricker::play() {
+    qDebug() << "Before striking the ball, let's explain";
+    strike();
+}
+
+void Stricker::strike() {
+    qDebug() << "Strike the ball";
+}
+```
+
+Inside of the `Defender`:
+
+```cpp
+Defender::Defender(QObject *po_parent)
+    : Player{po_parent} {}
+
+void Defender::play() {
+    qDebug() << "Before defending, let's do some magic !";
+    defend();
+}
+
+void Defender::defend() {
+    qDebug() << "Defending our side !!";
+}
+```
+
+== Using child in QML
+As we already did with the `Player.qml`, we can now use the child of the `Player` class just like we already did with the `Player` class:
+
+```json
+Window {
+    width: 640
+    height: 480
+    visible: true
+    title: qsTr("Object list inherited properties")
+
+    FootBallTeam {
+        id: footballTeamId
+        title: "Rayon sport"
+        coach: "Coatch name"
+        captain: Stricker {
+            name: "Captain"
+            position: "Middle field"
+            isPlaying: true
+        }
+
+        players: [
+            Defender {
+                name: "Defender 1"
+                position: "Middle field"
+                isPlaying: true
+            }
+            , Stricker {
+                name: "Stricker 1"
+                position: "Middle field"
+                isPlaying: true
+            }
+            , Defender {
+                name: "Defender 2"
+                position: "Middle Field"
+                isPlaying: true
+            }, Stricker {
+                name: "Stricker 2"
+                position: "Middle Field"
+                isPlaying: true
+            }
+        ]
+    }
+
+    ListView {
+        id: playerListViewId
+        anchors.fill: parent
+        model: footballTeamId.players
+        delegate: Rectangle {
+            width: parent.width
+            height: 50
+            border.width: 1
+            border.color: "yellowgreen"
+            color: "beige"
+
+            Text {
+                anchors.centerIn: parent
+                text: name
+                font.pointSize: 20
+            }
+
+            Text {
+                text: position
+                font.pointSize: 10
+            }
+        }
+    }
+
+    Component.onCompleted: function() {
+        console.log("We have: " + footballTeamId.players.length + " players in the team named: " + footballTeamId.title)
+    }
+}
+```
+
+IMPORTANT: Don't forget to import the URI of the module at the beggining of the qml file.
